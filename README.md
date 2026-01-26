@@ -172,20 +172,3 @@ Live Demo: **Vercel**
 * Side-by-side candidate comparison
 * ATS API integration
 * Advanced keyword search & filters
-
----
-
-## 🤝 Contributors
-
-**Team: The Matrix**
-
-* Muhammad Aqib Javed
-* Shafqat Hussain (shafqathussain00)
-* Sarah Khan
-
----
-
-## 📄 License
-
-MIT License – free to use and improve.
-
