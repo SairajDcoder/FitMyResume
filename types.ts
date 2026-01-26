@@ -30,7 +30,7 @@ export interface Candidate {
   jobId: string; // Relates candidate to a job
   parsedData: ParsedResume | null;
   scoringResult: ScoringResult | null;
-  status: 'pending' | 'processing' | 'completed' | 'error';
+  status: "pending" | "processing" | "completed" | "error";
   error?: string;
 }
 
@@ -43,11 +43,11 @@ export interface Job {
   id: string;
   title: string;
   description: string;
-  employmentType: 'Full-time' | 'Part-time' | 'Contract' | 'Remote' | 'Hybrid';
-  experienceLevel: 'Entry' | 'Mid-level' | 'Senior';
+  employmentType: "Full-time" | "Part-time" | "Contract" | "Remote" | "Hybrid";
+  experienceLevel: "Entry" | "Mid-level" | "Senior";
   requiredSkills: JobSkill[];
   responsibilities: string[];
-  status: 'Draft' | 'Active' | 'Closed';
+  status: "Draft" | "Active" | "Closed";
 }
 
 // Represents the authenticated user object
@@ -55,13 +55,13 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'HR' | 'Admin'; // Future-proofing for roles
+  role: "HR" | "Admin"; // Future-proofing for roles
   profilePictureUrl?: string; // Optional field for the avatar
 }
 
 // Renamed from UserSettings for clarity, now represents app preferences
 export interface AppPreferences {
-  theme: 'light' | 'dark' | 'system';
+  theme: "light" | "dark" | "system";
   notifications: {
     email: boolean;
     inApp: boolean;
@@ -69,4 +69,5 @@ export interface AppPreferences {
 }
 
 // The old UserSettings is deprecated by the combination of User and AppPreferences
-export interface UserSettings extends Pick<User, 'name' | 'email'>, AppPreferences {}
+export interface UserSettings
+  extends Pick<User, "name" | "email">, AppPreferences {}

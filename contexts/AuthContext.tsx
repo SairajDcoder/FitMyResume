@@ -15,9 +15,10 @@ export const AuthContext = createContext<AuthContextType | undefined>(
   undefined,
 );
 
-const SESSION_STORAGE_KEY = "fitmyresume_token";
-const API_BASE_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+// In a real app, this would be in a secure backend.
+// We simulate it here in localStorage for the demo.
+const USERS_STORAGE_KEY = "talent_scout_ai_users";
+const SESSION_STORAGE_KEY = "talent_scout_ai_session";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -26,23 +27,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for an active session token and verify with backend
-    const checkSession = async () => {
+    // Check for an active session on initial load
+    const checkSession = () => {
       try {
-        const token = localStorage.getItem(SESSION_STORAGE_KEY);
-        if (token) {
-          const response = await fetch(`${API_BASE_URL}/auth/verify`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (response.ok) {
-            const userData = await response.json();
-            setUser(userData);
-          } else {
-            localStorage.removeItem(SESSION_STORAGE_KEY);
-          }
+        const session = localStorage.getItem(SESSION_STORAGE_KEY);
+        if (session) {
+          setUser(JSON.parse(session));
         }
       } catch (error) {
-        console.error("Failed to verify session:", error);
+        console.error("Failed to parse session:", error);
         localStorage.removeItem(SESSION_STORAGE_KEY);
       } finally {
         setIsLoading(false);
@@ -52,23 +45,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const login = async (email: string, pass: string): Promise<void> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password: pass }),
-      });
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        // Simulate network delay
+        const storedUsers = JSON.parse(
+          localStorage.getItem(USERS_STORAGE_KEY) || "[]",
+        );
+        const foundUser = storedUsers.find(
+          (u: any) => u.email === email && u.password === pass,
+        ); // NOTE: NEVER store plain text passwords! This is for demo only.
 
-      if (!response.ok) {
-        throw new Error("Invalid email or password.");
-      }
-
-      const data = await response.json();
-      localStorage.setItem(SESSION_STORAGE_KEY, data.token);
-      setUser(data.user);
-    } catch (error) {
-      throw error;
-    }
+        if (foundUser) {
+          const { password, ...userToSave } = foundUser;
+          localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(userToSave));
+          setUser(userToSave);
+          resolve();
+        } else {
+          reject(new Error("Invalid email or password."));
+        }
+      }, 500);
+    });
   };
 
   const signup = async (
@@ -76,60 +72,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     email: string,
     pass: string,
   ): Promise<void> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/signup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password: pass, role: "HR" }),
-      });
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        const storedUsers = JSON.parse(
+          localStorage.getItem(USERS_STORAGE_KEY) || "[]",
+        );
+        const userExists = storedUsers.some((u: any) => u.email === email);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Signup failed.");
-      }
+        if (userExists) {
+          reject(new Error("An account with this email already exists."));
+          return;
+        }
 
-      const data = await response.json();
-      localStorage.setItem(SESSION_STORAGE_KEY, data.token);
-      setUser(data.user);
-    } catch (error) {
-      throw error;
-    }
+        const newUser = {
+          id: `user-${Date.now()}`,
+          name,
+          email,
+          password: pass, // Again, demo only. Use hashing in a real app.
+          role: "HR" as const,
+        };
+
+        storedUsers.push(newUser);
+        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(storedUsers));
+
+        const { password, ...userToSave } = newUser;
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(userToSave));
+        setUser(userToSave);
+        resolve();
+      }, 500);
+    });
   };
 
   const logout = () => {
-    const token = localStorage.getItem(SESSION_STORAGE_KEY);
-    if (token) {
-      fetch(`${API_BASE_URL}/auth/logout`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      }).catch(console.error);
-    }
     setUser(null);
     localStorage.removeItem(SESSION_STORAGE_KEY);
   };
 
-  const updateUser = async (updatedData: Partial<User>) => {
-    try {
-      const token = localStorage.getItem(SESSION_STORAGE_KEY);
-      const response = await fetch(`${API_BASE_URL}/auth/update`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(updatedData),
-      });
+  const updateUser = (updatedData: Partial<User>) => {
+    setUser((prevUser) => {
+      if (!prevUser) return null;
+      const updatedUser = { ...prevUser, ...updatedData };
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(updatedUser));
 
-      if (!response.ok) {
-        throw new Error("Failed to update user.");
+      // Also update the master user list
+      const storedUsers = JSON.parse(
+        localStorage.getItem(USERS_STORAGE_KEY) || "[]",
+      );
+      const userIndex = storedUsers.findIndex(
+        (u: any) => u.id === updatedUser.id,
+      );
+      if (userIndex > -1) {
+        const originalUser = storedUsers[userIndex];
+        storedUsers[userIndex] = { ...originalUser, ...updatedData };
+        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(storedUsers));
       }
-
-      const updatedUser = await response.json();
-      setUser(updatedUser);
-    } catch (error) {
-      console.error("Update user error:", error);
-      throw error;
-    }
+      return updatedUser;
+    });
   };
 
   const value = useMemo(
