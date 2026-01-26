@@ -164,24 +164,6 @@ Live Demo: **Vercel**
 
 ---
 
-## 📸 Screenshots
-
-### Dashboard
-![Dashboard](assets/dashboard.png)
-
-### Job Post
-![Job Post](assets/job_post.png)
-
-### Candidates
-![Candidates](assets/candidates.png)
-
-### Upload Resume
-![Upload Resume](assets/resume.png)
-
-### Profile
-![Profile](assets/profiles.png)
-
----
 
 ## 🎯 Future Enhancements
 
@@ -190,20 +172,3 @@ Live Demo: **Vercel**
 * Side-by-side candidate comparison
 * ATS API integration
 * Advanced keyword search & filters
-
----
-
-## 🤝 Contributors
-
-**Team: The Matrix**
-
-* Muhammad Aqib Javed
-* Shafqat Hussain (shafqathussain00)
-* Sarah Khan
-
----
-
-## 📄 License
-
-MIT License – free to use and improve.
-
