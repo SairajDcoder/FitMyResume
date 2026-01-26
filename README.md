@@ -164,24 +164,6 @@ Live Demo: **Vercel**
 
 ---
 
-## 📸 Screenshots
-
-### Dashboard
-![Dashboard](assets/dashboard.png)
-
-### Job Post
-![Job Post](assets/job_post.png)
-
-### Candidates
-![Candidates](assets/candidates.png)
-
-### Upload Resume
-![Upload Resume](assets/resume.png)
-
-### Profile
-![Profile](assets/profiles.png)
-
----
 
 ## 🎯 Future Enhancements
 
