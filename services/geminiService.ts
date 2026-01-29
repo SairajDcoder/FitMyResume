@@ -18,6 +18,10 @@ const resumeSchema = {
       type: Type.ARRAY,
       items: { type: Type.STRING },
     },
+    githubUrl: {
+      type: Type.STRING,
+      description: "GitHub profile URL if present in the resume, otherwise null"
+    },
     experience: {
       type: Type.ARRAY,
       items: {
@@ -74,7 +78,6 @@ const fileToGenerativePart = async (file: File) => {
 };
 
 export async function screenCandidate(parsedResume: any, job: any) {
-  // 1️⃣ Run ATS filter
   const atsResult = runATS({
     requiredSkills: job.requiredSkills,
     candidateSkills: parsedResume.skills,
@@ -84,37 +87,47 @@ export async function screenCandidate(parsedResume: any, job: any) {
     isStudent: parsedResume.isStudent
   });
 
-  // Early rejection
+  
+
+  // ❌ REJECTED
   if (atsResult.rejected) {
     return {
-      fitScore: Math.max(0, atsResult.score),
+      fitScore: atsResult.score,        // ✅ REQUIRED
       status: "REJECTED" as const,
-      atsReasons: atsResult.reasons
+      atsReasons: atsResult.reasons     // ✅ allowed
     };
   }
 
-  // 2️⃣ External evidence review
+  // ✅ EVALUATED
   const evidence = analyzeResources({
     githubUrl: parsedResume.githubUrl,
     publications: parsedResume.publications
   });
 
-  // 3️⃣ Base Fit Score (AI / heuristic)
-  let baseFitScore = atsResult.score - 10;
-
-  // 4️⃣ Apply evidence boost
-  const finalFitScore = Math.min(
+  const fitScore = Math.min(
     100,
-    baseFitScore + evidence.evidenceBoost
+    atsResult.score - 10 + evidence.evidenceBoost
   );
+const evidenceSummary =
+  evidence.githubReviewed || evidence.publicationSignal !== "none"
+    ? `External resources reviewed: ${
+        evidence.githubReviewed ? "GitHub profile detected" : ""
+      }${
+        evidence.publicationSignal !== "none"
+          ? evidence.githubReviewed
+            ? " and publications found"
+            : "Publications found"
+          : ""
+      }.`
+    : "No external resources (GitHub or publications) were detected.";
 
-  // 5️⃣ Return unified result
-  return {
-    fitScore: Math.min(100, atsResult.score - 10 + evidence.evidenceBoost),
-    status: "EVALUATED" as const,
-    atsScore: atsResult.score,
-    evidenceReview: evidence
-  };
+return {
+  fitScore,
+  status: "EVALUATED" as const,
+  atsScore: atsResult.score,
+  evidenceReview: evidence,
+  evidenceSummary               // 👈 ADD THIS
+};
 }
 
 
@@ -123,16 +136,38 @@ export const parseResume = async (file: File): Promise<ParsedResume> => {
     const filePart = await fileToGenerativePart(file);
     
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: { parts: [
-        {text: "Extract the following information from the provided resume document. If a field is not found, use a reasonable placeholder or null."},
+    model: "gemini-2.5-flash",
+    contents: {
+      parts: [
+        {
+          text: `
+  Extract structured candidate information from the resume.
+
+  IMPORTANT INSTRUCTIONS:
+  - If a GitHub profile link exists, extract the FULL URL.
+  - Detect GitHub links even if:
+    • embedded behind text like "GitHub"
+    • written as github.com/username
+    • written without https://
+  - Look specifically for links pointing to github.com.
+  - Do NOT guess or fabricate URLs.
+  - If no GitHub link is found, return null for githubUrl.
+
+  Return only valid JSON matching the provided schema.
+  `
+        },
         filePart
-      ]},
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: resumeSchema
-      }
-    });
+      ]
+    },
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: resumeSchema
+    },
+    
+  });
+
+  
+
     
     const text = response.text;
     if (!text) {
@@ -141,6 +176,12 @@ export const parseResume = async (file: File): Promise<ParsedResume> => {
 
     try {
         const parsedJson = JSON.parse(text);
+        // 🔍 DEBUG: Full parsed resume
+console.log("Parsed Resume JSON:", parsedJson);
+
+// 🔍 DEBUG: GitHub URL specifically
+console.log("Parsed GitHub URL:", parsedJson.githubUrl);
+
         return parsedJson as ParsedResume;
     } catch (e) {
         console.error("JSON Parse Error:", e, text);

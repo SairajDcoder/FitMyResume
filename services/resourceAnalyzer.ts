@@ -11,6 +11,23 @@ export interface ResourceEvidence {
   publicationSignal: "none" | "weak" | "strong";
   evidenceBoost: number; // -5 to +10
   notes: string[];
+  evidenceSummary: string;
+}
+
+// services/resourceAnalyzer.ts
+
+export interface ResourceInput {
+  githubUrl?: string;
+  publications?: string[];
+}
+
+export interface ResourceEvidence {
+  githubReviewed: boolean;
+  githubSignal: "none" | "weak" | "strong";
+  publicationSignal: "none" | "weak" | "strong";
+  evidenceBoost: number;
+  notes: string[];
+  evidenceSummary: string;
 }
 
 export function analyzeResources(
@@ -19,33 +36,57 @@ export function analyzeResources(
   let boost = 0;
   const notes: string[] = [];
 
-  // GitHub
   let githubSignal: ResourceEvidence["githubSignal"] = "none";
+  let publicationSignal: ResourceEvidence["publicationSignal"] = "none";
 
-  if (input.githubUrl) {
+  // ------------------
+  // GitHub logic
+  // ------------------
+  const hasGithub =
+    Boolean(input.githubUrl && input.githubUrl.trim() !== "");
+
+  if (hasGithub) {
     githubSignal = "weak";
     boost += 5;
     notes.push("GitHub profile provided");
-
-    // You can later replace this with real GitHub API checks
   } else {
     notes.push("No GitHub profile provided");
   }
 
-  // Publications
-  let publicationSignal: ResourceEvidence["publicationSignal"] = "none";
+  // ------------------
+  // Publications logic
+  // ------------------
+  const hasPublications =
+    Boolean(input.publications && input.publications.length > 0);
 
-  if (input.publications && input.publications.length > 0) {
+  if (hasPublications) {
     publicationSignal = "weak";
     boost += 3;
     notes.push("Publications listed");
   }
 
+  // ------------------
+  // Human-readable summary
+  // ------------------
+  let evidenceSummary = "No external resources were detected.";
+
+  if (hasGithub && hasPublications) {
+    evidenceSummary =
+      "External resources reviewed: GitHub profile and publications were detected.";
+  } else if (hasGithub) {
+    evidenceSummary =
+      "External resources reviewed: GitHub profile was detected.";
+  } else if (hasPublications) {
+    evidenceSummary =
+      "External resources reviewed: Publications were detected.";
+  }
+
   return {
-    githubReviewed: Boolean(input.githubUrl),
+    githubReviewed: hasGithub,
     githubSignal,
     publicationSignal,
-    evidenceBoost: Math.min(boost, 10),
-    notes
+    evidenceBoost: boost,
+    notes,
+    evidenceSummary
   };
 }

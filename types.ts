@@ -4,18 +4,23 @@ export interface ParsedResume {
   phone: string;
   summary: string;
   skills: string[];
+
+  githubUrl?: string | null;   // 👈 ADD THIS
+
   experience: {
     title: string;
     company: string;
     duration: string;
     responsibilities: string[];
   }[];
+
   education: {
     degree: string;
     institution: string;
     year: string;
   }[];
 }
+
 export interface ScoringResult {
   score: number;
   strengths: string;
@@ -29,13 +34,13 @@ export interface Candidate {
   jobId: string;
   parsedData: ParsedResume | null;
   scoringResult: ScoringResult | null;
+  finalScore?: number; 
 
   systemScreeningResult?: SystemScreeningResult | null;
 
   status: "pending" | "processing" | "completed" | "error";
   error?: string;
 }
-
 
 export type EvidenceReview = {
   githubReviewed: boolean;
@@ -61,6 +66,8 @@ export type SystemScreeningResult =
         publicationSignal: "none" | "weak" | "strong";
         evidenceBoost: number;
         notes: string[];
+        evidenceSummary: string;   
+  
       };
     };
 

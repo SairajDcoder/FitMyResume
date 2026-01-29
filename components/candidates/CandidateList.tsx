@@ -18,7 +18,7 @@ const getScoreColor = (score: number | null | undefined) => {
 };
 
 const CandidateRow: React.FC<{candidate: Candidate, onViewCandidate: (id: string) => void}> = ({ candidate, onViewCandidate }) => {
-    const score = candidate.scoringResult?.score;
+    const score = candidate.finalScore;
     
     return (
         <tr className="border-b border-border hover:bg-muted/50 transition-colors">

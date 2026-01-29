@@ -1,4 +1,3 @@
-// services/atsEngine.ts
 
 export interface ATSInput {
   requiredSkills: string[];
@@ -11,7 +10,7 @@ export interface ATSInput {
 
 
 export interface ATSResult {
-  score: number;          // 0–100
+  score: number;          
   rejected: boolean;
   reasons: string[];
 }
