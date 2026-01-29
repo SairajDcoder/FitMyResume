@@ -1,5 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { ParsedResume, ScoringResult } from "../types";
+import { runATS } from "./atEngine";
+import { analyzeResources } from "./resourceAnalyzer";
 
 // Assume API_KEY is available in the environment from which this script is run.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
@@ -70,6 +72,51 @@ const fileToGenerativePart = async (file: File) => {
     inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
   };
 };
+
+export async function screenCandidate(parsedResume: any, job: any) {
+  // 1️⃣ Run ATS filter
+  const atsResult = runATS({
+    requiredSkills: job.requiredSkills,
+    candidateSkills: parsedResume.skills,
+    minExperience: job.minExperience,
+    candidateExperience: parsedResume.experienceYears,
+    seniority: job.seniority,
+    isStudent: parsedResume.isStudent
+  });
+
+  // Early rejection
+  if (atsResult.rejected) {
+    return {
+      fitScore: Math.max(0, atsResult.score),
+      status: "REJECTED" as const,
+      atsReasons: atsResult.reasons
+    };
+  }
+
+  // 2️⃣ External evidence review
+  const evidence = analyzeResources({
+    githubUrl: parsedResume.githubUrl,
+    publications: parsedResume.publications
+  });
+
+  // 3️⃣ Base Fit Score (AI / heuristic)
+  let baseFitScore = atsResult.score - 10;
+
+  // 4️⃣ Apply evidence boost
+  const finalFitScore = Math.min(
+    100,
+    baseFitScore + evidence.evidenceBoost
+  );
+
+  // 5️⃣ Return unified result
+  return {
+    fitScore: Math.min(100, atsResult.score - 10 + evidence.evidenceBoost),
+    status: "EVALUATED" as const,
+    atsScore: atsResult.score,
+    evidenceReview: evidence
+  };
+}
+
 
 export const parseResume = async (file: File): Promise<ParsedResume> => {
   try {

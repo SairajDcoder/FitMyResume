@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Candidate, Job, AppPreferences } from './types';
 import { MOCK_CANDIDATE, MOCK_JOBS } from './constants';
-import { parseResume, scoreCandidate } from './services/geminiService';
+import { parseResume, scoreCandidate , screenCandidate } from './services/geminiService';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import PageWrapper from './components/layout/PageWrapper';
@@ -15,6 +15,27 @@ import SettingsPage from './components/settings/SettingsPage';
 import { useAuth } from './hooks/useAuth';
 import LoginPage from './components/auth/LoginPage';
 import SignupPage from './components/auth/SignupPage';
+
+function mapJobToATS(job: Job) {
+  const experienceMap: Record<Job["experienceLevel"], number> = {
+    "Entry": 0,
+    "Mid-level": 2,
+    "Senior": 5
+  };
+
+  const seniorityMap: Record<Job["experienceLevel"], "junior" | "mid" | "senior"> = {
+    "Entry": "junior",
+    "Mid-level": "mid",
+    "Senior": "senior"
+  };
+
+  return {
+    requiredSkills: job.requiredSkills.map(s => s.name),
+    minExperience: experienceMap[job.experienceLevel],
+    seniority: seniorityMap[job.experienceLevel]
+  };
+}
+
 
 export type Page = 'dashboard' | 'jobs' | 'candidates' | 'upload' | 'settings';
 type AuthPage = 'login' | 'signup';
@@ -53,9 +74,10 @@ const App: React.FC = () => {
       status: 'processing',
       parsedData: null,
       scoringResult: null,
+      systemScreeningResult: null // 👈 ADD THIS
     }));
-    
-    setCandidates(prev => [...newCandidates, ...prev]);
+
+        setCandidates(prev => [...newCandidates, ...prev]);
 
     const jobDescription = `${selectedJob.title}\n\n${selectedJob.description}\n\nRequired Skills: ${selectedJob.requiredSkills.map(s => s.name).join(', ')}`;
 
@@ -64,10 +86,39 @@ const App: React.FC = () => {
       return (async () => {
         try {
           const parsedData = await parseResume(file);
-          setCandidates(prev => prev.map(c => c.id === candidate.id ? { ...c, parsedData } : c));
 
-          const scoringResult = await scoreCandidate(parsedData, jobDescription);
-          setCandidates(prev => prev.map(c => c.id === candidate.id ? { ...c, scoringResult, status: 'completed' } : c));
+        setCandidates(prev =>
+          prev.map(c =>
+            c.id === candidate.id
+              ? { ...c, parsedData }
+              : c
+          )
+        );
+
+        // 🔥 NEW: system screening (ATS + evidence)
+        const atsJobInput = mapJobToATS(selectedJob);
+
+        const systemScreeningResult = await screenCandidate(
+          parsedData,
+          atsJobInput
+        );
+        
+        console.log('System Screening Result:', systemScreeningResult);
+        // Existing Gemini HR scoring
+        const scoringResult = await scoreCandidate(parsedData, jobDescription);
+
+        setCandidates(prev =>
+          prev.map(c =>
+            c.id === candidate.id
+              ? {
+                  ...c,
+                  scoringResult,
+                  systemScreeningResult,
+                  status: 'completed'
+                }
+              : c
+          )
+        );
         } catch (err) {
           const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
           console.error(`Failed to screen candidate ${file.name}:`, err);
