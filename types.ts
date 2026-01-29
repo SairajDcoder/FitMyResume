@@ -4,12 +4,16 @@ export interface ParsedResume {
   phone: string;
   summary: string;
   skills: string[];
+
+  githubUrl?: string | null;   // 👈 ADD THIS
+
   experience: {
     title: string;
     company: string;
     duration: string;
     responsibilities: string[];
   }[];
+
   education: {
     degree: string;
     institution: string;
@@ -27,12 +31,46 @@ export interface ScoringResult {
 export interface Candidate {
   id: string;
   fileName: string;
-  jobId: string; // Relates candidate to a job
+  jobId: string;
   parsedData: ParsedResume | null;
   scoringResult: ScoringResult | null;
+  finalScore?: number; 
+
+  systemScreeningResult?: SystemScreeningResult | null;
+
   status: "pending" | "processing" | "completed" | "error";
   error?: string;
 }
+
+export type EvidenceReview = {
+  githubReviewed: boolean;
+  githubSignal: "none" | "weak" | "strong";
+  publicationSignal: "none" | "weak" | "strong";
+  evidenceBoost: number;
+  notes: string[];
+}
+
+export type SystemScreeningResult =
+  | {
+      fitScore: number;
+      status: "REJECTED";
+      atsReasons: string[];
+    }
+  | {
+      fitScore: number;
+      status: "EVALUATED";
+      atsScore: number;
+      evidenceReview: {
+        githubReviewed: boolean;
+        githubSignal: "none" | "weak" | "strong";
+        publicationSignal: "none" | "weak" | "strong";
+        evidenceBoost: number;
+        notes: string[];
+        evidenceSummary: string;   
+  
+      };
+    };
+
 
 export interface JobSkill {
   name: string;
@@ -49,6 +87,7 @@ export interface Job {
   responsibilities: string[];
   status: "Draft" | "Active" | "Closed";
 }
+
 
 // Represents the authenticated user object
 export interface User {

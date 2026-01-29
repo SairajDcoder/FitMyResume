@@ -1,5 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { ParsedResume, ScoringResult } from "../types";
+import { runATS } from "./atEngine";
+import { analyzeResources } from "./resourceAnalyzer";
 
 // Assume API_KEY is available in the environment from which this script is run.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
@@ -15,6 +17,10 @@ const resumeSchema = {
     skills: {
       type: Type.ARRAY,
       items: { type: Type.STRING },
+    },
+    githubUrl: {
+      type: Type.STRING,
+      description: "GitHub profile URL if present in the resume, otherwise null"
     },
     experience: {
       type: Type.ARRAY,
@@ -71,21 +77,97 @@ const fileToGenerativePart = async (file: File) => {
   };
 };
 
+export async function screenCandidate(parsedResume: any, job: any) {
+  const atsResult = runATS({
+    requiredSkills: job.requiredSkills,
+    candidateSkills: parsedResume.skills,
+    minExperience: job.minExperience,
+    candidateExperience: parsedResume.experienceYears,
+    seniority: job.seniority,
+    isStudent: parsedResume.isStudent
+  });
+
+  
+
+  // ❌ REJECTED
+  if (atsResult.rejected) {
+    return {
+      fitScore: atsResult.score,        // ✅ REQUIRED
+      status: "REJECTED" as const,
+      atsReasons: atsResult.reasons     // ✅ allowed
+    };
+  }
+
+  // ✅ EVALUATED
+  const evidence = analyzeResources({
+    githubUrl: parsedResume.githubUrl,
+    publications: parsedResume.publications
+  });
+
+  const fitScore = Math.min(
+    100,
+    atsResult.score - 10 + evidence.evidenceBoost
+  );
+const evidenceSummary =
+  evidence.githubReviewed || evidence.publicationSignal !== "none"
+    ? `External resources reviewed: ${
+        evidence.githubReviewed ? "GitHub profile detected" : ""
+      }${
+        evidence.publicationSignal !== "none"
+          ? evidence.githubReviewed
+            ? " and publications found"
+            : "Publications found"
+          : ""
+      }.`
+    : "No external resources (GitHub or publications) were detected.";
+
+return {
+  fitScore,
+  status: "EVALUATED" as const,
+  atsScore: atsResult.score,
+  evidenceReview: evidence,
+  evidenceSummary               // 👈 ADD THIS
+};
+}
+
+
 export const parseResume = async (file: File): Promise<ParsedResume> => {
   try {
     const filePart = await fileToGenerativePart(file);
     
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: { parts: [
-        {text: "Extract the following information from the provided resume document. If a field is not found, use a reasonable placeholder or null."},
+    model: "gemini-2.5-flash",
+    contents: {
+      parts: [
+        {
+          text: `
+  Extract structured candidate information from the resume.
+
+  IMPORTANT INSTRUCTIONS:
+  - If a GitHub profile link exists, extract the FULL URL.
+  - Detect GitHub links even if:
+    • embedded behind text like "GitHub"
+    • written as github.com/username
+    • written without https://
+  - Look specifically for links pointing to github.com.
+  - Do NOT guess or fabricate URLs.
+  - If no GitHub link is found, return null for githubUrl.
+
+  Return only valid JSON matching the provided schema.
+  `
+        },
         filePart
-      ]},
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: resumeSchema
-      }
-    });
+      ]
+    },
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: resumeSchema
+    },
+    
+  });
+
+  
+
     
     const text = response.text;
     if (!text) {
@@ -94,6 +176,12 @@ export const parseResume = async (file: File): Promise<ParsedResume> => {
 
     try {
         const parsedJson = JSON.parse(text);
+        // 🔍 DEBUG: Full parsed resume
+console.log("Parsed Resume JSON:", parsedJson);
+
+// 🔍 DEBUG: GitHub URL specifically
+console.log("Parsed GitHub URL:", parsedJson.githubUrl);
+
         return parsedJson as ParsedResume;
     } catch (e) {
         console.error("JSON Parse Error:", e, text);
