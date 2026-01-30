@@ -24,7 +24,7 @@ const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     }, []);
 
     return (
-        <div className={`transition-opacity duration-500 ease-in-out ${visible ? 'opacity-100' : 'opacity-0'}`}>
+        <div className={`transition-opacity duration-500 ease-in-out mt-0 ${visible ? 'opacity-100' : 'opacity-0'}`}>
             {children}
         </div>
     );

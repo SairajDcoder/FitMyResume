@@ -9,7 +9,9 @@ interface JobConfigPageProps {
   candidates: Candidate[];
   onSaveJob: (job: Job) => void;
   onDeleteJob: (jobId: string) => void;
+  onOpenJobModal: (job: Job | null) => void;
 }
+
 
 const getStatusColor = (status: Job['status']) => {
     switch (status) {
@@ -52,25 +54,15 @@ const JobCard: React.FC<{
 };
 
 
-const JobConfigPage: React.FC<JobConfigPageProps> = ({ jobs, candidates, onSaveJob, onDeleteJob }) => {
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingJob, setEditingJob] = useState<Job | null>(null);
+const JobConfigPage: React.FC<JobConfigPageProps> = ({
+  jobs,
+  candidates,
+  onSaveJob,
+  onDeleteJob,
+  onOpenJobModal
+}) => {
 
-    const handleOpenCreateModal = () => {
-        setEditingJob(null);
-        setIsModalOpen(true);
-    };
-
-    const handleOpenEditModal = (job: Job) => {
-        setEditingJob(job);
-        setIsModalOpen(true);
-    };
-
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
-        setEditingJob(null);
-    };
-
+   
     const getCandidateCountForJob = (jobId: string) => {
         return candidates.filter(c => c.jobId === jobId).length;
     };
@@ -83,7 +75,7 @@ const JobConfigPage: React.FC<JobConfigPageProps> = ({ jobs, candidates, onSaveJ
                     <p className="text-muted-foreground">Manage job descriptions and screening criteria.</p>
                 </div>
                 <button 
-                    onClick={handleOpenCreateModal}
+                    onClick={() => onOpenJobModal(null)}
                     className="flex items-center gap-2 bg-primary text-primary-foreground font-semibold px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
                 >
                     <PlusIcon className="w-5 h-5" />
@@ -98,7 +90,7 @@ const JobConfigPage: React.FC<JobConfigPageProps> = ({ jobs, candidates, onSaveJ
                             key={job.id}
                             job={job}
                             candidateCount={getCandidateCountForJob(job.id)}
-                            onEdit={handleOpenEditModal}
+                            onEdit={onOpenJobModal}
                             onDelete={onDeleteJob}
                         />
                     ))}
@@ -108,15 +100,6 @@ const JobConfigPage: React.FC<JobConfigPageProps> = ({ jobs, candidates, onSaveJ
                     <h3 className="text-lg font-semibold">No job posts yet.</h3>
                     <p>Click "Create Job" to get started.</p>
                 </div>
-            )}
-
-            {isModalOpen && (
-                <JobFormModal 
-                    isOpen={isModalOpen}
-                    onClose={handleCloseModal}
-                    onSave={onSaveJob}
-                    jobToEdit={editingJob}
-                />
             )}
         </div>
     );

@@ -65,7 +65,7 @@ const JobFormModal: React.FC<JobFormModalProps> = ({ isOpen, onClose, onSave, jo
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-40 flex items-center justify-center">
+    <div className="fixed inset-0 bg-black/60 z-40 flex items-center justify-center mt-0">
       <div className="bg-card rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
         <header className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
           <h2 className="text-lg font-semibold text-foreground">{jobToEdit ? 'Edit Job Post' : 'Create New Job'}</h2>

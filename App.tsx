@@ -20,6 +20,7 @@ import SettingsPage from "./components/settings/SettingsPage";
 import { useAuth } from "./hooks/useAuth";
 import LoginPage from "./components/auth/LoginPage";
 import SignupPage from "./components/auth/SignupPage";
+import JobFormModal from "./components/jobs/JobFormModal";
 
 /* ======================
    ATS JOB MAPPING
@@ -73,11 +74,25 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activePage, setActivePage] = useState<Page>("dashboard");
   const [authPage, setAuthPage] = useState<AuthPage>("login");
+  const [jobModalState, setJobModalState] = useState<{
+  isOpen: boolean;
+  job: Job | null;
+}>({ isOpen: false, job: null });
+
 
   const [appPreferences] = useState<AppPreferences>({
     theme: "system",
     notifications: { email: true, inApp: true }
   });
+
+  const openJobModal = (job: Job | null) => {
+  setJobModalState({ isOpen: true, job });
+};
+
+const closeJobModal = () => {
+  setJobModalState({ isOpen: false, job: null });
+};
+
 
   /* ======================
      SCREEN CANDIDATES
@@ -215,6 +230,16 @@ ${selectedJob.requiredSkills.map(s => s.name).join(", ")}
     setJobs(prev => prev.filter(j => j.id !== jobId));
   };
 
+  {jobModalState.isOpen && (
+  <JobFormModal
+    isOpen
+    jobToEdit={jobModalState.job}
+    onClose={() => setJobModalState({ isOpen: false, job: null })}
+    onSave={handleSaveJob}
+  />
+)}
+
+
   /* ======================
      RENDER
   ====================== */
@@ -225,11 +250,13 @@ ${selectedJob.requiredSkills.map(s => s.name).join(", ")}
       case "jobs":
         return (
           <JobConfigPage
-            jobs={jobs}
-            candidates={candidates}
-            onSaveJob={handleSaveJob}
-            onDeleteJob={handleDeleteJob}
-          />
+  jobs={jobs}
+  candidates={candidates}
+  onSaveJob={handleSaveJob}
+  onDeleteJob={handleDeleteJob}
+  onOpenJobModal={openJobModal}
+/>
+
         );
       case "candidates":
         return (
@@ -298,6 +325,16 @@ ${selectedJob.requiredSkills.map(s => s.name).join(", ")}
           onClose={handleCloseProfile}
         />
       )}
+
+      {jobModalState.isOpen && (
+  <JobFormModal
+    isOpen
+    jobToEdit={jobModalState.job}
+    onClose={closeJobModal}
+    onSave={handleSaveJob}
+  />
+)}
+
     </div>
   );
 };
