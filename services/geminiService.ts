@@ -94,7 +94,8 @@ export async function screenCandidate(parsedResume: any, job: any) {
     return {
       fitScore: atsResult.score,        // ✅ REQUIRED
       status: "REJECTED" as const,
-      atsReasons: atsResult.reasons     // ✅ allowed
+      atsReasons: atsResult.reasons  ,
+      recommendation: "REJECT"   // ✅ allowed
     };
   }
 
@@ -108,6 +109,15 @@ export async function screenCandidate(parsedResume: any, job: any) {
     100,
     atsResult.score - 10 + evidence.evidenceBoost
   );
+
+  const recommendation =
+  fitScore >= 70
+    ? "STRONG_MATCH"
+    : fitScore >= 50
+      ? "POTENTIAL"
+      : "WEAK_MATCH";
+
+
 const evidenceSummary =
   evidence.githubReviewed || evidence.publicationSignal !== "none"
     ? `External resources reviewed: ${
@@ -121,12 +131,20 @@ const evidenceSummary =
       }.`
     : "No external resources (GitHub or publications) were detected.";
 
+    console.log("DECISION", {
+  fitScore,
+  recommendation,
+  atsScore: atsResult.score
+});
+
+
 return {
   fitScore,
   status: "EVALUATED" as const,
   atsScore: atsResult.score,
   evidenceReview: evidence,
-  evidenceSummary               // 👈 ADD THIS
+  evidenceSummary     ,
+  recommendation          // 👈 ADD THIS
 };
 }
 
