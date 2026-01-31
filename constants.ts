@@ -44,6 +44,7 @@ export const MOCK_JOBS: Job[] = [
 
 export const MOCK_CANDIDATE: Candidate = {
   id: 'mock-1',
+  finalScore : 72,
   fileName: 'John_Doe_Resume.pdf',
   jobId: 'job-1',
   status: 'completed',
